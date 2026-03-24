@@ -1,0 +1,46 @@
+var NGROK_URL = "your URL";
+
+function doGet() {
+  return HtmlService.createHtmlOutputFromFile('Index')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+function askAI(userQuestion) {
+  var endpoint = NGROK_URL.replace(/\/$/, "") + "/ask";
+
+  var options = {
+    method: "post",
+    contentType: "application/json",
+    headers: {
+      "ngrok-skip-browser-warning": "69420"
+    },
+    payload: JSON.stringify({ question: userQuestion }),
+    muteHttpExceptions: true
+  };
+
+  try {
+    var response = UrlFetchApp.fetch(endpoint, options);
+    var status = response.getResponseCode();
+    var text = response.getContentText();
+
+    if (status !== 200) {
+      return "Backend HTTP error " + status + ": " + text;
+    }
+
+    // Try to parse JSON safely
+    var json;
+    try {
+      json = JSON.parse(text);
+    } catch (parseErr) {
+      return "Backend did not return valid JSON. Raw response: " + text;
+    }
+
+    if (json.answer) return json.answer;
+    if (json.error) return "Backend error: " + json.error;
+
+    return "Unexpected backend response: " + text;
+
+  } catch (e) {
+    return "Apps Script error: " + e.toString();
+  }
+}
